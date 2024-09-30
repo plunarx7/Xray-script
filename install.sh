@@ -186,7 +186,9 @@ writeXrayConfig() {
             {
                 "type": "field",
                 "domain": [
-                    "domain:openai.com"
+                    "domain:openai.com",
+                    "fast.com",
+                    "whoer.net"
                 ],
                 "outboundTag": "warp"
             },
@@ -264,7 +266,7 @@ server {
     ssl_prefer_server_ciphers off;
 
     server_name           $domain;
-    location /th1nk {
+    location /vless {
     if (\$http_upgrade != "websocket") {
         return 404;
     }
@@ -283,16 +285,23 @@ server {
         proxy_pass $proxyUrl;
     }
 }
-server{
-        listen 80;
-        server_name _;
-        return 500;
-}
-# 80 redirect to 443
 server {
-    listen 80;
-    server_name $domain;
-    rewrite ^(.*)$ https://\${server_name}\$1 permanent;
+        listen 80;
+        server_name    $domain;
+        location /vless {
+    if (\$http_upgrade != "websocket") {
+        return 404;
+    }
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:$xrayPort;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host \$host;
+    # Show real IP in xray access.log
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+  }
 }
 EOF
 }
